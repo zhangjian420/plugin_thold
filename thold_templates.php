@@ -546,7 +546,7 @@ function template_add() {
 
 		$save['data_source_friendly'] = $temp2['name'];
 		$save['thold_enabled']        = 'on';
-		$save['thold_type']           = 0;
+		$save['thold_type']           = 1;
 		$save['repeat_alert']         = read_config_option('alert_repeat');
 
 		// Allow other plugins to modify thrshold contents

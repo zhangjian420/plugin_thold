@@ -37,6 +37,7 @@ function thold_poller_bottom() {
 		thold_upgrade_database(true);
 	}
 
+	cacti_log('thold_daemon_enable: ' . read_config_option('thold_daemon_enable'), false, 'SYSTEM');
 	if (read_config_option('thold_daemon_enable') == '') {
 		/* record the start time */
 		$start = microtime(true);
@@ -50,6 +51,7 @@ function thold_poller_bottom() {
 		/* record the end time */
 		$end = microtime(true);
 
+		cacti_log('remote_storage_method: ' . read_config_option('remote_storage_method'), false, 'SYSTEM');
 		if (read_config_option('remote_storage_method') == 1) {
 			$total_hosts = db_fetch_cell_prepared('SELECT count(*)
 				FROM host

@@ -1,0 +1,8 @@
+1¡¢thold_templates.php 
+$save['thold_type']           = 1;
+
+2¡¢thold_functions.php Ìí¼Ó
+$save['thold_type']           = get_request_var('thold_type',1);
+
+3¡¢thold.php ÖÐÐÞ¸Ä
+'friendly_name' => __('Acknowledgment Options','thold'),

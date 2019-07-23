@@ -2025,6 +2025,14 @@ function thold_check_threshold(&$thold_data) {
 	// Modify critical thold values based upon a cdef if present
 	thold_modify_values_by_cdef($thold_data);
 
+	cacti_log(
+	    'Checking Threshold:' .
+	    ' Name: ' . var_export($thold_data['data_source_name'],true) .
+	    ', local_data_id: ' . var_export($thold_data['local_data_id'],true) .
+	    ', data_template_rrd_id: ' . var_export($thold_data['data_template_rrd_id'],true) .
+	    ', value: ' . var_export($thold_data['lastread'],true)
+	    , false, 'SYSTEM');
+	
 	thold_debug('Checking Threshold:' .
 		' Name: ' . var_export($thold_data['data_source_name'],true) .
 		', local_data_id: ' . var_export($thold_data['local_data_id'],true) .
@@ -2120,6 +2128,9 @@ function thold_check_threshold(&$thold_data) {
 		FROM graph_templates_graph
 		WHERE local_graph_id = ?',
 		array($thold_data['local_graph_id']));
+	
+	cacti_log('baseu:'. $baseu, false, 'SYSTEM');
+	cacti_log('thold_send_text_only:'. $thold_send_text_only, false, 'SYSTEM');
 
 	$file_array = array();
 	if ($thold_send_text_only != 'on') {
@@ -2137,6 +2148,8 @@ function thold_check_threshold(&$thold_data) {
 
 	$url = $httpurl . '/graph.php?local_graph_id=' . $thold_data['local_graph_id'] . '&rra_id=all';
 
+	cacti_log('url:'. $url, false, 'SYSTEM');
+	cacti_log('thold_type:'. $thold_data['thold_type'], false, 'SYSTEM');
 	switch ($thold_data['thold_type']) {
 	case 0:	/* hi/low */
 		if ($thold_data['lastread'] != '') {
@@ -2563,7 +2576,8 @@ function thold_check_threshold(&$thold_data) {
 		$bl_count_prev    = $thold_data['bl_fail_count'];
 		$bl_fail_trigger  = ($thold_data['bl_fail_trigger'] == '' ? $alert_bl_trigger : $thold_data['bl_fail_trigger']);
 		$thold_data['bl_alert'] = thold_check_baseline($thold_data['local_data_id'], $thold_data['data_source_name'], $thold_data['lastread'], $thold_data);
-
+		
+		cacti_log('bl_alert:'. $thold_data['bl_alert'], false, 'SYSTEM');
 		switch($thold_data['bl_alert']) {
 		case -2:	/* exception is active, Future Release 'todo' */
 			break;
@@ -4205,8 +4219,18 @@ function thold_check_baseline($local_data_id, $name, $current_value, &$thold_dat
 
 	$now = time();
 
+	cacti_log('local_data_id = '. $local_data_id
+	    . " name = " .$name
+	    . " current_value = " .$current_value
+	    . " bl_thold_valid = " .$thold_data['bl_thold_valid']
+	    . " now = " .$now
+	    . " thold_hi = " .$thold_data['thold_hi']
+	    . " thold_low = " .$thold_data['thold_low']
+	    . " bl_ref_time_range = " .$thold_data['bl_ref_time_range']
+	    , false, 'SYSTEM');
 	// See if we have a valid cached thold_high and thold_low value
 	if ($thold_data['bl_thold_valid'] && $now < $thold_data['bl_thold_valid']) {
+	    cacti_log('into cache1', false, 'SYSTEM');
 		if ($thold_data['thold_hi'] && $current_value > $thold_data['thold_hi']) {
 			$failed = 2;
 		} elseif ($thold_data['thold_low'] && $current_value < $thold_data['thold_low']) {
@@ -4217,7 +4241,9 @@ function thold_check_baseline($local_data_id, $name, $current_value, &$thold_dat
 	} else {
 		$midnight =  gmmktime(0,0,0);
 		$t0 = $midnight + floor(($now - $midnight) / $thold_data['bl_ref_time_range']) * $thold_data['bl_ref_time_range'];
-
+		cacti_log('midnight = ' .$midnight 
+		    ." t0 = " . $t0, false, 'SYSTEM');
+		
 		$ref_values    = thold_get_ref_value($thold_data['local_data_id'], $name, $t0, $thold_data['bl_ref_time_range']);
 		if ($ref_values === false || sizeof($ref_values) == 0) {
 			return -1;
@@ -4229,11 +4255,17 @@ function thold_check_baseline($local_data_id, $name, $current_value, &$thold_dat
 			$ref_value_min = min($ref_values);
 			$ref_value_max = max($ref_values);
 		}
+		
+		cacti_log('1ref_value_min = ' .$ref_value_min
+		    ." 1ref_value_max = " . $ref_value_max, false, 'SYSTEM');
 
 		if ($thold_data['cdef'] != 0) {
 			$ref_value_min = thold_build_cdef($thold_data['cdef'], $ref_value_min, $thold_data['local_data_id'], $thold_data['data_template_rrd_id']);
 			$ref_value_max = thold_build_cdef($thold_data['cdef'], $ref_value_max, $thold_data['local_data_id'], $thold_data['data_template_rrd_id']);
 		}
+		
+		cacti_log('2ref_value_min = ' .$ref_value_min
+		    ." 2ref_value_max = " . $ref_value_max, false, 'SYSTEM');
 
 		$blt_low  = '';
 		$blt_high = '';
@@ -4250,6 +4282,10 @@ function thold_check_baseline($local_data_id, $name, $current_value, &$thold_dat
 		$thold_data['thold_low']      = $blt_low;
 		$thold_data['thold_hi']       = $blt_high;
 		$thold_data['bl_thold_valid'] = $t0 + $thold_data['bl_ref_time_range'];
+		cacti_log('blt_low = ' .$blt_low
+		    ." blt_high = " . $blt_high
+		    ." bl_thold_valid = " . $thold_data['bl_thold_valid']
+		    , false, 'SYSTEM');
 
 		$failed = 0;
 
@@ -4681,7 +4717,7 @@ function save_thold() {
 	$save['thold_hrule_alert']    = get_nfilter_request_var('thold_hrule_alert');
 
 	$save['restored_alert']       = isset_request_var('restored_alert') ? 'on':'';
-	$save['thold_type']           = get_request_var('thold_type');
+	$save['thold_type']           = get_request_var('thold_type',1);
 	$save['template_enabled']     = isset_request_var('template_enabled') ? 'on':'';
 
 	// High / Low
