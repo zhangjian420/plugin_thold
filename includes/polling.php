@@ -39,6 +39,7 @@ function thold_poller_bottom() {
 
 	//cacti_log('thold_daemon_enable: ' . read_config_option('thold_daemon_enable'), false, 'SYSTEM');
 	if (read_config_option('thold_daemon_enable') == '') {
+    	//cacti_log('in if', false, 'SYSTEM');
 		/* record the start time */
 		$start = microtime(true);
 
@@ -88,6 +89,7 @@ function thold_poller_bottom() {
 			VALUES ('stats_thold', ?)",
 			array($thold_stats));
 	} else {
+	    //cacti_log('in else', false, 'SYSTEM');
 		/* collect some stats */
 		$now = microtime(true);
 
