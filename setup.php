@@ -101,10 +101,10 @@ function plugin_thold_install($upgrade = false) {
 	api_plugin_register_hook($plugin, 'clog_regex_array', 'thold_clog_regex_array', 'setup.php');
 
 	// Setup permissions
-	api_plugin_register_realm($plugin, 'thold.php', 'Configure Thresholds', 1);
-	api_plugin_register_realm($plugin, 'thold_templates.php', 'Configure Threshold Templates', 1);
-	api_plugin_register_realm($plugin, 'notify_lists.php', 'Manage Notification Lists', 1);
-	api_plugin_register_realm($plugin, 'thold_graph.php,graph_thold.php,thold_view_failures.php,thold_view_normal.php,thold_view_recover.php,thold_view_recent.php,thold_view_host.php', 'View Thresholds', 1);
+	api_plugin_register_realm($plugin, 'thold.php', '阈值', 1);
+	api_plugin_register_realm($plugin, 'thold_templates.php', '阈值模板', 1);
+	api_plugin_register_realm($plugin, 'notify_lists.php', '阈值通知列表', 1);
+	api_plugin_register_realm($plugin, 'thold_graph.php,graph_thold.php,thold_view_failures.php,thold_view_normal.php,thold_view_recover.php,thold_view_recent.php,thold_view_host.php', '查看阈值', 1);
 
 	include_once($config['base_path'] . '/plugins/thold/includes/database.php');
 
@@ -862,7 +862,7 @@ function thold_data_source_action_execute($action) {
 				}
 
 				if (strlen($message)) {
-					thold_raise_message(__('Created %s thresholds', $created) . '<br>' . $message, MESSAGE_LEVEL_INFO);
+					thold_raise_message(__('Created %s thresholds', $created,"thold") . '<br>' . $message, MESSAGE_LEVEL_INFO);
 				} else {
 					thold_raise_message(__('No Threshold(s) Created.  Either they already exist, or no suitable matches found.', 'thold'), MESSAGE_LEVEL_INFO);
 				}

@@ -1,7 +1,7 @@
 [info]
 name = thold
 version = 1.3.2
-longname = Thresholds
+longname = 阈值
 author = The Cacti Group
 email = 
 homepage = http://www.cacti.net

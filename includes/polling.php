@@ -423,7 +423,6 @@ function thold_poller_output(&$rrd_update_array) {
 
 function thold_check_all_thresholds() {
 	global $config;
-
 	include($config['base_path'] . '/plugins/thold/includes/arrays.php');
 	include_once($config['base_path'] . '/plugins/thold/thold_functions.php');
 
@@ -467,7 +466,6 @@ function thold_check_all_thresholds() {
 	}
 
 	$tholds = api_plugin_hook_function('thold_get_live_hosts', db_fetch_assoc($sql_query));
-
 	$total_tholds = sizeof($tholds);
 	foreach ($tholds as $thold) {
 		thold_check_threshold($thold);
@@ -834,17 +832,21 @@ function thold_update_host_status() {
 	if (cacti_sizeof($hosts)) {
 		foreach ($hosts as $host) {
 			if (api_plugin_is_enabled('maint')) {
-				if (plugin_maint_check_cacti_host($host['id'])) {
+			    $bol = plugin_maint_check_cacti_host($host['id']);
+			    if ($bol) {
 					continue;
 				}
 			}
 			$failed .= ($failed != '' ? '), (':'(') . $host['id'];
 		}
 		$failed .= ')';
-
-		db_execute("INSERT INTO plugin_thold_host_failed
-			(host_id)
-			VALUES $failed");
+		
+		//cacti_log("failed sql = " . $failed);
+		if($failed != ")"){
+		    db_execute("INSERT INTO plugin_thold_host_failed
+    			(host_id)
+    			VALUES $failed");
+		}
 	}
 
 	return $total_hosts;

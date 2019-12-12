@@ -438,7 +438,7 @@ function do_actions() {
 		</tr>";
 
 		if ($drp_action == 6) {
-			print "<tr><td colspan='2'><p><i>Operator Message:</i><br><textarea class='ui-state-default ui-corner-all' style='width:70%;height:50px;' area-multiline='true' rows='2' id='message' name='message'></textarea></p></td></tr>";
+			print "<tr><td colspan='2'><p><i>操作备注:</i><br><textarea class='ui-state-default ui-corner-all' style='width:70%;height:50px;' area-multiline='true' rows='2' id='message' name='message'></textarea></p></td></tr>";
 		}
 
 		$save_html = "<input type='button' class='ui-button ui-corner-all ui-widget' value='" . __esc('Cancel', 'thold') . "' onClick='cactiReturnTo()'>";
@@ -537,7 +537,7 @@ function thold_request_validation() {
 
 function list_tholds() {
 	global $thold_actions, $thold_states, $config, $host_id, $timearray, $thold_types, $item_rows;
-
+	//thold_ftp_put("第二次发送！！！！！");
 	thold_request_validation();
 
 	/* if the number of rows is -1, set it to the default */
@@ -914,7 +914,8 @@ function list_tholds() {
 			print "<tr class='selectable " . $thold_states[$bgcolor]['class'] . "' id='line" . $thold_data['id'] . "'>";
 
 			if ($thold_data['name_cache'] != '') {
-				$name = $thold_data['name_cache'];
+				//$name = $thold_data['name_cache'];
+				$name = $thold_data['graph_title_cache'];
 			} else {
 				$name = thold_expand_string($thold_data, $thold_data['name']);
 			}

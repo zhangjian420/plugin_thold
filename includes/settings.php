@@ -59,7 +59,7 @@ function thold_config_insert() {
 
 	$menu[__('Management')]['plugins/thold/notify_lists.php'] = __('Notification Lists', 'thold');
 	$menu[__('Management')]['plugins/thold/thold.php'] = __('Thresholds', 'thold');
-	$menu[__('Templates')]['plugins/thold/thold_templates.php'] = __('Threshold', 'thold');
+	$menu[__('Templates')]['plugins/thold/thold_templates.php'] = __('阈值模板', 'thold');
 
 	if (isset_request_var('thold_vrule')) {
 		if (get_nfilter_request_var('thold_vrule') == 'on') {

@@ -1225,7 +1225,7 @@ function get_allowed_thresholds($sql_where = '', $order_by = 'td.name', $limit =
 	$sql_having = "HAVING $sql_having";
 
 	$tholds_sql = ("SELECT
-		td.*, dtd.rrd_step, tt.name AS template_name, dtr.data_source_name AS data_source,
+		td.*, dtd.rrd_step, tt.name AS template_name, dtr.data_source_name AS data_source,gtg.title_cache as graph_title_cache,
 		IF(IFNULL(td.`lastread`,'')='',NULL,(td.`lastread` + 0.0)) AS `flastread`,
 		IF(IFNULL(td.`oldvalue`,'')='',NULL,(td.`oldvalue` + 0.0)) AS `foldvalue`,
 		UNIX_TIMESTAMP() - UNIX_TIMESTAMP(lastchanged) AS `instate`,
@@ -1233,6 +1233,8 @@ function get_allowed_thresholds($sql_where = '', $order_by = 'td.name', $limit =
 		FROM thold_data AS td
 		INNER JOIN graph_local AS gl
 		ON gl.id=td.local_graph_id
+        INNER JOIN graph_templates_graph AS gtg
+		ON gtg.local_graph_id=td.local_graph_id
 		LEFT JOIN graph_templates AS gt
 		ON gt.id=gl.graph_template_id
 		LEFT JOIN host AS h
@@ -1257,6 +1259,8 @@ function get_allowed_thresholds($sql_where = '', $order_by = 'td.name', $limit =
 			FROM thold_data AS td
 			INNER JOIN graph_local AS gl
 			ON gl.id=td.local_graph_id
+            INNER JOIN graph_templates_graph AS gtg
+		    ON gtg.local_graph_id=td.local_graph_id
 			LEFT JOIN graph_templates AS gt
 			ON gt.id=gl.graph_template_id
 			LEFT JOIN host AS h
@@ -2019,16 +2023,17 @@ function thold_datasource_required($name, $data_source) {
 	return true;
 }
 
+// 注意单位的问题
 function thold_check_threshold(&$thold_data) {
 	global $config, $plugins, $debug, $thold_types;
-	
 // 	cacti_log('into1 thold_low: ' . $thold_data['thold_low'] .
 // 	    ', thold_hi: ' . $thold_data['thold_hi']
 // 	    , false, 'SYSTEM');
 
 	// Modify critical thold values based upon a cdef if present
-	thold_modify_values_by_cdef($thold_data);
-
+	//thold_modify_values_by_cdef($thold_data);
+	$thold_data['lastread'] = $thold_data['lastread'] * 8;
+	
 // 	cacti_log(
 // 	    'into2 Checking Threshold:' .
 // 	    ' Name: ' . var_export($thold_data['data_source_name'],true) .
@@ -2078,6 +2083,7 @@ function thold_check_threshold(&$thold_data) {
 	}
 
 	$local_graph_id = $thold_data['local_graph_id'];
+	//cacti_log("insert 3 = " . $local_graph_id);
 
 	$h = array();
 	if (isset($thold_data['hostname'])) {
@@ -2097,7 +2103,6 @@ function thold_check_threshold(&$thold_data) {
 			return;
 		}
 	}
-
 	/* ensure that Cacti will make of individual defined SNMP Engine IDs */
 	$overwrite['snmp_engine_id'] = $h['snmp_engine_id'];
 
@@ -2580,9 +2585,6 @@ function thold_check_threshold(&$thold_data) {
 		$bl_alert_prev    = $thold_data['bl_alert'];
 		$bl_count_prev    = $thold_data['bl_fail_count'];
 		$bl_fail_trigger  = ($thold_data['bl_fail_trigger'] == '' ? $alert_bl_trigger : $thold_data['bl_fail_trigger']);
-		
-		//cacti_log('before check: low = '. $thold_data['thold_low'] . " hi = " . $thold_data['thold_hi'], false, 'SYSTEM');
-		
 		$thold_data['bl_alert'] = thold_check_baseline($thold_data['local_data_id'], $thold_data['data_source_name'], $thold_data['lastread'], $thold_data);
 		
 		//cacti_log('bl_alert:'. $thold_data['bl_alert'], false, 'SYSTEM');
@@ -2600,7 +2602,9 @@ function thold_check_threshold(&$thold_data) {
 				if ($thold_data['bl_fail_count'] >= $bl_fail_trigger && $thold_data['restored_alert'] != 'on') {
 					thold_debug('Threshold Baseline check returned to normal');
 
-					$subject = 'NORMAL: ' . thold_get_cached_name($thold_data) . ($thold_show_datasource ? ' [' . $thold_data['data_source_name'] . ']' : '') . ' restored to normal threshold with value ' . thold_format_number($thold_data['lastread'], 2, $baseu);
+					$subject = '恢复: ' . thold_get_cached_name($thold_data) 
+					. ($thold_show_datasource ? ' [' . $thold_data['data_source_name'] . ']' : '') 
+					. ' 恢复到正常值，当前值 ' . thold_format_number($thold_data['lastread'], 2, $baseu);
 
 					if ($syslog) {
 						logger($subject, $url, $syslog_priority, $syslog_facility);
@@ -2611,6 +2615,7 @@ function thold_check_threshold(&$thold_data) {
 					if (trim($alert_emails) != '' && $thold_data['acknowledgment'] == '') {
 						$alert_msg = get_thold_alert_text($thold_data['data_source_name'], $thold_data, $h, $thold_data['lastread'], $thold_data['local_graph_id']);
 						thold_mail($alert_emails, '', $subject, $alert_msg, $file_array);
+						thold_ftp_put($subject);
 					}
 
 					thold_command_execution($thold_data, $h, false, false, true);
@@ -2679,7 +2684,13 @@ function thold_check_threshold(&$thold_data) {
 			$ra_modulo = ($thold_data['repeat_alert'] == '' ? $realert : $thold_data['repeat_alert']);
 
 			$ra = ($thold_data['bl_fail_count'] > $bl_fail_trigger && !empty($ra_modulo) && ($thold_data['bl_fail_count'] % $ra_modulo) == 0);
-
+// 			cacti_log("bl_fail_count = ".$thold_data['bl_fail_count']
+// 			         .",bl_fail_trigger = " . $bl_fail_trigger
+// 			         .",repeat_alert = " . $thold_data['repeat_alert']
+// 			         .",ra_modulo = " . $ra_modulo
+// 		             .",ra = " . $ra
+// 			    , false, 'SYSTEM');
+			
 			if ($thold_data['bl_fail_count'] == $bl_fail_trigger || $ra) {
 				if (!$ra) {
 					db_execute_prepared('UPDATE thold_data
@@ -2705,7 +2716,11 @@ function thold_check_threshold(&$thold_data) {
 				if (!$suspend_notify) {
 					thold_debug('Alerting is necessary');
 
-					$subject = 'ALERT: ' . thold_get_cached_name($thold_data) . ($thold_show_datasource ? ' [' . $thold_data['data_source_name'] . ']' : '') . ' ' . ($ra ? 'is still' : 'went') . ' ' . ($breach_up ? 'above' : 'below') . ' calculated baseline threshold ' . ($breach_up ? thold_format_number($thold_data['thold_hi'], 2, $baseu) : thold_format_number($thold_data['thold_low'], 2, $baseu)) . ' with ' . thold_format_number($thold_data['lastread'], 2, $baseu);
+					$subject = '告警: ' . thold_get_cached_name($thold_data) . 
+					   ($thold_show_datasource ? ' [' . $thold_data['data_source_name'] . ']' : '') . ' ' 
+					       . ($ra ? '仍然' : '出现') . ' ' . ($breach_up ? '高于' : '低于') 
+					       . ' 基线值 ' . ($breach_up ? thold_format_number($thold_data['thold_hi'], 2, $baseu) : thold_format_number($thold_data['thold_low'], 2, $baseu)) 
+					       . ' ，当前值 ' . thold_format_number($thold_data['lastread'], 2, $baseu);
 
 					if ($syslog) {
 						logger($subject, $url, $syslog_priority, $syslog_facility);
@@ -2716,6 +2731,7 @@ function thold_check_threshold(&$thold_data) {
 					if (trim($alert_emails) != '' && $thold_data['acknowledgment'] == '') {
 						$alert_msg = get_thold_alert_text($thold_data['data_source_name'], $thold_data, $h, $thold_data['lastread'], $thold_data['local_graph_id']);
 						thold_mail($alert_emails, '', $subject, $alert_msg, $file_array);
+						thold_ftp_put($subject);
 					}
 
 					thold_command_execution($thold_data, $h, $breach_up, $breach_down, false);
@@ -4228,93 +4244,50 @@ function thold_check_exception_periods($local_data_id, $ref_time, $ref_range) {
  */
 function thold_check_baseline($local_data_id, $name, $current_value, &$thold_data) {
 	global $debug;
-
 	$now = time();
-
-// 	cacti_log('local_data_id = '. $local_data_id
-// 	    . " name = " .$name
-// 	    . " current_value = " .$current_value
-// 	    . " bl_thold_valid = " .$thold_data['bl_thold_valid']
-// 	    . " now = " .$now
-// 	    . " thold_hi = " .$thold_data['thold_hi']
-// 	    . " thold_low = " .$thold_data['thold_low']
-// 	    . " bl_ref_time_range = " .$thold_data['bl_ref_time_range']
-// 	    , false, 'SYSTEM');
 	// See if we have a valid cached thold_high and thold_low value
 	if ($thold_data['bl_thold_valid'] && $now < $thold_data['bl_thold_valid']) {
 	    //cacti_log('into cache1', false, 'SYSTEM');
 		if ($thold_data['thold_hi'] && $current_value > $thold_data['thold_hi']) {
 			$failed = 2;
-		} elseif ($thold_data['thold_low'] && $current_value < $thold_data['thold_low']) {
+		} elseif ($current_value <= 0 || ($thold_data['thold_low'] && $current_value < $thold_data['thold_low'])) {
 			$failed = 1;
 		} else {
 			$failed= 0;
 		}
-		$thold_data['thold_hi'] = $thold_data['thold_hi'] / 8;
-		$thold_data['thold_low'] = $thold_data['thold_low'] / 8;
 	} else {
 		$midnight =  gmmktime(0,0,0);
 		$t0 = $midnight + floor(($now - $midnight) / $thold_data['bl_ref_time_range']) * $thold_data['bl_ref_time_range'];
-// 		cacti_log('midnight = ' .$midnight 
-// 		    ." local_data_id = " . $thold_data['local_data_id']
-// 		    ." name = " . $name
-// 		    ." t0 = " . $t0
-// 		    ." bl_ref_time_range = " . $thold_data['bl_ref_time_range']
-// 		    , false, 'SYSTEM');
-		
-		// �������ĵ�λ���ֽڣ���Ҫת����λ
+		// 单位是字节，返回时要转行成bit
 		$ref_values    = thold_get_ref_value($thold_data['local_data_id'], $name, $t0, $thold_data['bl_ref_time_range']);
-		if ($ref_values === false || sizeof($ref_values) == 0) {
+		if ($ref_values === false || sizeof($ref_values) == 0) { // 如果没有获取这一段时间内的值，这里返回-1
 			return -1;
 		}
-
-		/* Note: any values are returned indexed by timestamp, not 0-based *
-		 *       no reason we can't still use min() or max()               */
 		if (cacti_sizeof($ref_values) >= 1) {
 			$ref_value_min = min($ref_values);
 			$ref_value_max = max($ref_values);
 		}
-		
-// 		cacti_log('1ref_value_min = ' .$ref_value_min
-// 		    ." 1ref_value_max = " . $ref_value_max, false, 'SYSTEM');
-
-		/*if ($thold_data['cdef'] != 0) {
-			$ref_value_min = thold_build_cdef($thold_data['cdef'], $ref_value_min, $thold_data['local_data_id'], $thold_data['data_template_rrd_id']);
-			$ref_value_max = thold_build_cdef($thold_data['cdef'], $ref_value_max, $thold_data['local_data_id'], $thold_data['data_template_rrd_id']);
-		}*/
-		
-// 		cacti_log('2ref_value_min = ' .$ref_value_min
-// 		    ." 2ref_value_max = " . $ref_value_max, false, 'SYSTEM');
-
 		$blt_low  = '';
 		$blt_high = '';
-
 		if ($thold_data['bl_pct_down'] != '') {
-			$blt_low  = $ref_value_min - ($ref_value_min * $thold_data['bl_pct_down'] / 100);
+			$blt_low  = ($ref_value_min - ($ref_value_min * $thold_data['bl_pct_down'] / 100)) * 8;
 		}
-
 		if ($thold_data['bl_pct_up'] != '') {
-			$blt_high = $ref_value_max + ($ref_value_max * $thold_data['bl_pct_up'] / 100);
+			$blt_high = ($ref_value_max + ($ref_value_max * $thold_data['bl_pct_up'] / 100)) * 8;
 		}
 
 		// Cache the calculated or empty values
 		$thold_data['thold_low']      = $blt_low;
 		$thold_data['thold_hi']       = $blt_high;
 		$thold_data['bl_thold_valid'] = $t0 + $thold_data['bl_ref_time_range'];
-// 		cacti_log('blt_low = ' .$blt_low
-// 		    ." blt_high = " . $blt_high
-// 		    ." bl_thold_valid = " . $thold_data['bl_thold_valid']
-// 		    , false, 'SYSTEM');
 
 		$failed = 0;
-
 		// Check low boundary
-		if ($blt_low != '' && $current_value < ($blt_low * 8)) { // ��Ϊ current_value��λ��λ��blt_low ��λ���ֽ�
+		if ($current_value <= 0 || ($blt_low != '' && $current_value < $blt_low)) {
 			$failed = 1;
 		}
-
 		// Check up boundary
-		if ($failed == 0 && $blt_high != '' && $current_value > ($blt_high * 8)) {
+		if ($failed == 0 && $blt_high != '' && $current_value > $blt_high) {
 			$failed = 2;
 		}
 	}
@@ -5680,7 +5653,7 @@ function thold_threshold_ack_prompt($id) {
 		</td>
 	</tr>";
 
-	print "<tr><td colspan='2'><p><i>Operator Message:</i><br><textarea class='ui-state-default ui-corner-all' style='width:70%;height:50px;' area-multiline='true' rows='2' id='message' name='message'></textarea></p></td></tr>";
+	print "<tr><td colspan='2'><p><i>ȷ�ϱ�ע:</i><br><textarea class='ui-state-default ui-corner-all' style='width:70%;height:50px;' area-multiline='true' rows='2' id='message' name='message'></textarea></p></td></tr>";
 
 	$save_html = "<input type='button' class='ui-button ui-corner-all ui-widget' value='" . __esc('Cancel', 'thold') . "' onClick='cactiReturnTo()'>";
 
@@ -6044,7 +6017,7 @@ function thold_get_default_suggested_name($thold_data, $id = 0) {
 			array($id));
 	}
 
-	$desc = '|data_source_description| [|data_source_name|]';
+	$desc = '|graph_title| [|data_source_name|]';
 
 	if (isset($thold_data['suggested_name']) && !empty($thold_data['suggested_name'])) {
 		$desc = $thold_data['suggested_name'];
@@ -6181,3 +6154,24 @@ function validate_template_import_columns($template) {
 	return true;
 }
 
+function thold_ftp_put($subject){
+    global $config;
+    $path = $config['base_path'] . "/ftp/".time().".txt";
+    $myfile = fopen($path, "w");
+    //fwrite($myfile, $subject);
+    fwrite($myfile, mb_convert_encoding( $subject, 'gbk', mb_detect_encoding($subject) ) );
+    
+    fclose($myfile);
+    
+    try {
+        // 上传到ftp服务器
+        $conn = ftp_connect("172.16.9.18") ;
+        ftp_login($conn,"ftpcacti","Cacti@123");
+        ftp_put($conn,time().".txt",$path,FTP_BINARY);
+        ftp_close($conn);
+    } catch (Exception $e) {
+        cacti_log("Window服务器FTP连接不上 172.16.9.18");
+    }
+    // 上传完成后，删除文件
+    unlink($path);
+}

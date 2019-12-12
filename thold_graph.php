@@ -594,7 +594,7 @@ function tholds() {
 
 			form_selectable_cell($actions_url, $thold_data['id'], '', 'left');
 
-			$name_cache1 = '<a href="' .  html_escape($config['url_path'] . 'plugins/thold/thold.php?action=edit&id=' . $thold_data['id']) . '">'.$thold_data['name_cache'].'</a>';
+			$name_cache1 = '<a href="' .  html_escape($config['url_path'] . 'plugins/thold/thold.php?action=edit&id=' . $thold_data['id']) . '">'.$thold_data['graph_title_cache'].'</a>';
 			form_selectable_cell($thold_data['name_cache'] != '' ? $name_cache1 : __('No name set', 'thold'), $thold_data['id'], '', 'left');
 
 			form_selectable_cell($thold_data['id'], $thold_data['id'], '', 'right');
