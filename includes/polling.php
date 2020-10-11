@@ -352,7 +352,7 @@ function thold_poller_output(&$rrd_update_array) {
 		LEFT JOIN data_template_data AS dtd
 		ON dtd.local_data_id = td.local_data_id
 		WHERE dtr.data_source_name!=''
-		AND td.local_data_id IN($local_data_ids)");
+		AND td.local_data_id IN($local_data_ids) and td.is_aggregate = 0");
 
 	if (cacti_sizeof($tholds)) {
 		$sql = array();
@@ -414,7 +414,7 @@ function thold_poller_output(&$rrd_update_array) {
 			}
 
 			/* accomodate deleted tholds */
-			db_execute('DELETE FROM thold_data WHERE local_data_id=0');
+			db_execute('DELETE FROM thold_data WHERE local_data_id=0 and is_aggregate = 0');
 		}
 	}
 
@@ -438,7 +438,7 @@ function thold_check_all_thresholds() {
 				WHERE td.thold_enabled = 'on'
 				AND (h.poller_id = 1 OR h.poller_id IS NULL)
 				AND td.tcheck = 1
-				AND h.status=3";
+				AND h.status=3 and td.is_aggregate = 0";
 		} else {
 			$sql_query = "SELECT td.*, h.hostname,
 				h.description, h.notes AS dnotes, h.snmp_engine_id
@@ -450,7 +450,7 @@ function thold_check_all_thresholds() {
 				WHERE td.thold_enabled = 'on'
 				AND h.poller_id = " . $config['poller_id'] . "
 				AND td.tcheck = 1
-				AND h.status=3";
+				AND h.status=3 and td.is_aggregate = 0";
 		}
 	} else {
 		$sql_query = "SELECT td.*, h.hostname,
@@ -462,7 +462,7 @@ function thold_check_all_thresholds() {
 			ON td.host_id = h.id
 			WHERE td.thold_enabled = 'on'
 			AND td.tcheck = 1
-			AND h.status=3";
+			AND h.status=3 and td.is_aggregate = 0";
 	}
 
 	$tholds = api_plugin_hook_function('thold_get_live_hosts', db_fetch_assoc($sql_query));
@@ -470,6 +470,34 @@ function thold_check_all_thresholds() {
 	foreach ($tholds as $thold) {
 		thold_check_threshold($thold);
 	}
+	
+	// 检查聚合告警
+	$sql_query = "select td.* FROM thold_data td where td.is_aggregate = 1 ";
+	$tholds = db_fetch_assoc($sql_query);
+	$total_tholds_1 = sizeof($tholds);
+	$total_tholds += $total_tholds_1;
+	foreach ($tholds as $thold) {
+	    $start = strtotime(date('Y-m-d H:i',time()));
+        $ref_values  = thold_get_ref_value_aggregate($thold["local_graph_id"], $start - 600 , $start);
+        //cacti_log("ref_values = " . json_encode($ref_values));
+        $v1 = "0";
+        foreach($ref_values as $ref_value){
+            if(empty($ref_value) || $ref_value == "NaN"){
+                continue;
+            }
+            $v1 = $ref_value;
+        }
+        db_execute("INSERT INTO thold_data
+					(id, tcheck, lastread, lasttime, oldvalue)
+					VALUES (".$thold["id"].",1,".($v1).",'".date('Y-m-d H:i:s',time())."',".db_qstr(time()-60).")
+					ON DUPLICATE KEY UPDATE
+						tcheck=VALUES(tcheck),
+						lastread=VALUES(lastread),
+						lasttime=VALUES(lasttime),
+						oldvalue=VALUES(oldvalue)");
+        thold_check_threshold_aggregate($thold);
+	}
+	
 
 	if (read_config_option('remote_storage_method') == 1) {
 		if ($config['poller_id'] == 1) {

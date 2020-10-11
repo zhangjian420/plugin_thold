@@ -1438,7 +1438,7 @@ function thold_data_source_remove($data_ids) {
 	$tholds = array_rekey(
 		db_fetch_assoc('SELECT id
 			FROM thold_data
-			WHERE local_data_id IN (' . implode(', ', $data_ids) . ')'),
+			WHERE local_data_id IN (' . implode(', ', $data_ids) . ') and is_aggregate = 0'),
 		'id', 'id'
 	);
 

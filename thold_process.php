@@ -246,7 +246,7 @@ if (cacti_sizeof($tholds)) {
 			WHERE tdd.pid = ?
 			AND tdd.poller_id = ?
 			AND td.thold_enabled = 'on'
-			AND td.tcheck = 1 AND h.status=3";
+			AND td.tcheck = 1 AND h.status=3 and td.is_aggregate = 0";
 
 		$tholds = api_plugin_hook_function(
 			'thold_get_live_hosts',
@@ -265,7 +265,7 @@ if (cacti_sizeof($tholds)) {
 			ON td.host_id = h.id
 			WHERE tdd.pid = ?
 			AND td.thold_enabled = 'on'
-			AND td.tcheck = 1 AND h.status=3";
+			AND td.tcheck = 1 AND h.status=3 and td.is_aggregate = 0";
 
 		$tholds = api_plugin_hook_function(
 			'thold_get_live_hosts',

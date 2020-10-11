@@ -449,11 +449,11 @@ function tholds() {
 			'sort' => 'ASC',
 			'align' => 'right'
 		),
-		'nosort3' => array(
-			'display' => __('Duration', 'thold'),
-			'sort' => 'ASC',
-			'align' => 'right'
-		),
+// 		'nosort3' => array(
+// 			'display' => __('Duration', 'thold'),
+// 			'sort' => 'ASC',
+// 			'align' => 'right'
+// 		),
 		'repeat_alert' => array(
 			'display' => __('Repeat', 'thold'),
 			'sort' => 'ASC',
@@ -464,12 +464,12 @@ function tholds() {
 			'sort' => 'ASC',
 			'align' => 'right'
 		),
-		'instate' => array(
+		/*'instate' => array(
 			'display' => __('In State', 'thold'),
 			'sort' => 'DESC',
 			'align' => 'right',
 			'tip' => __('The amount of time that has passed since the Threshold either Breached or was Triggered', 'thold')
-		),
+		),*/
 		'acknowledgment' => array(
 			'display' => __('Ack Required', 'thold'),
 			'sort' => 'ASC',
@@ -608,28 +608,28 @@ function tholds() {
 					form_selectable_cell(thold_format_number($thold_data['thold_warning_hi'], 2, $baseu) . ' / ' . thold_format_number($thold_data['thold_hi'], 2, $baseu), $thold_data['id'], '', 'right');
 					form_selectable_cell(thold_format_number($thold_data['thold_warning_low'], 2, $baseu) . ' / ' . thold_format_number($thold_data['thold_low'], 2, $baseu), $thold_data['id'], '', 'right');
 					form_selectable_cell('<i>' . plugin_thold_duration_convert($thold_data['local_data_id'], $thold_data['thold_fail_trigger'], 'alert') . '</i>', $thold_data['id'], '', 'right');
-					form_selectable_cell(__('N/A', 'thold'),  $thold_data['id'], '', 'right');
+					//form_selectable_cell(__('N/A', 'thold'),  $thold_data['id'], '', 'right');
 
 					break;
 				case 1:
 					form_selectable_cell($thold_data['bl_pct_up'] . (strlen($thold_data['bl_pct_up']) ? '%':'-'), $thold_data['id'], '', 'right');
 					form_selectable_cell($thold_data['bl_pct_down'] . (strlen($thold_data['bl_pct_down']) ? '%':'-'), $thold_data['id'], '', 'right');
 					form_selectable_cell('<i>' . plugin_thold_duration_convert($thold_data['local_data_id'], $thold_data['bl_fail_trigger'], 'alert') . '</i>', $thold_data['id'], '', 'right');
-					form_selectable_cell($timearray[$thold_data['bl_ref_time_range']/$thold_data['rrd_step']], $thold_data['id'], '', 'right');
+					//form_selectable_cell($timearray[$thold_data['bl_ref_time_range']/$thold_data['rrd_step']], $thold_data['id'], '', 'right');
 
 					break;
 				case 2:
 					form_selectable_cell(thold_format_number($thold_data['time_warning_hi'], 2, $baseu) . ' / ' . thold_format_number($thold_data['time_hi'], 2, $baseu), $thold_data['id'], '', 'right');
 					form_selectable_cell(thold_format_number($thold_data['time_warning_low'], 2, $baseu) . ' / ' . thold_format_number($thold_data['time_low'], 2, $baseu), $thold_data['id'], '', 'right');
 					form_selectable_cell('<i>' . __('%d Triggers', $thold_data['time_fail_trigger'], 'thold') . '</i>',  $thold_data['id'], '', 'right');
-					form_selectable_cell('<i>' . plugin_thold_duration_convert($thold_data['local_data_id'], $thold_data['time_fail_length'], 'time') . '</i>', $thold_data['id'], '', 'right');
+					//form_selectable_cell('<i>' . plugin_thold_duration_convert($thold_data['local_data_id'], $thold_data['time_fail_length'], 'time') . '</i>', $thold_data['id'], '', 'right');
 
 					break;
 				default:
 					form_selectable_cell('- / -',  $thold_data['id'], '', 'right');
 					form_selectable_cell('- / -',  $thold_data['id'], '', 'right');
 					form_selectable_cell(__('N/A', 'thold'),  $thold_data['id'], '', 'right');
-					form_selectable_cell(__('N/A', 'thold'),  $thold_data['id'], '', 'right');
+					//form_selectable_cell(__('N/A', 'thold'),  $thold_data['id'], '', 'right');
 			}
 
 			form_selectable_cell(($thold_data['repeat_alert'] == '' ? '' : plugin_thold_duration_convert($thold_data['local_data_id'], $thold_data['repeat_alert'], 'repeat')), $thold_data['id'], '', 'right');
@@ -637,7 +637,7 @@ function tholds() {
 			form_selectable_cell($alertstat, $thold_data['id'], '', 'right');
 
 			// The time since this threshold was triggered
-			form_selectable_cell('<i>' . get_time_since_last_event($thold_data) . '</i>',  $thold_data['id'], '', 'right');
+			//form_selectable_cell('<i>' . get_time_since_last_event($thold_data) . '</i>',  $thold_data['id'], '', 'right');
 
 			form_selectable_cell(($thold_data['acknowledgment'] == '' ? __('No', 'thold'):__('Yes', 'thold')), $thold_data['id'], '', 'right ' . ($thold_data['acknowledgment'] == '' ? '':'tholdAckCol'));
 
